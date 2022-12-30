@@ -76,33 +76,32 @@ def get_drinks_detail(jwt):
 @app.route('/drinks', methods=["POST"])
 @requires_auth('post:drinks')
 def post_drinks(jwt):
-    json = request.get_json()
-    title = json.get('title', None)
-    recipe = json.get('recipe', None)
+    data = request.get_json()
+    title = data.get('title', None)
+    recipe = data.get('recipe', None)
 
     if not title or not recipe:
         abort(400)
 
     newDrink = Drink()
     newDrink.title = title
-    newDrink.recipe = recipe
+    newDrink.recipe = json.dumps(recipe)
 
     try:
         newDrink.insert()
-    except:
+    except Exception as e:
         db.session.rollback()
+        print(e)
         abort(500)
-    finally:
-        db.session.close()
 
     return jsonify({
         'success': True,
-        'drinks': newDrink.long()
+        'drinks': [newDrink.long()]
     })
 
 
 '''
-@TODO implement endpoint
+@DONE implement endpoint
     PATCH /drinks/<id>
         where <id> is the existing model id
         it should respond with a 404 error if <id> is not found
@@ -112,10 +111,36 @@ def post_drinks(jwt):
     returns status code 200 and json {"success": True, "drinks": drink} where drink an array containing only the updated drink
         or appropriate status code indicating reason for failure
 '''
+@app.route('/drinks/<int:drink_id>', methods=["PATCH"])
+@requires_auth('patch:drinks')
+def patch_drinks(jwt, drink_id):
+    data = request.get_json()
+    drink = Drink.query.get(drink_id)
+    title = data.get('title', None)
+    recipe = data.get('recipe', None)
+
+    if (not title and not recipe) or not drink:
+        abort(400)
+
+    if title:
+        drink.title = title
+    if recipe:
+        drink.recipe = json.dumps(recipe)
+
+    try:
+        drink.update()
+    except:
+        db.session.rollback()
+        abort(500)
+
+    return jsonify({
+        'success': True,
+        'drinks': [drink.long()]
+    })
 
 
 '''
-@TODO implement endpoint
+@DONE implement endpoint
     DELETE /drinks/<id>
         where <id> is the existing model id
         it should respond with a 404 error if <id> is not found
@@ -124,6 +149,26 @@ def post_drinks(jwt):
     returns status code 200 and json {"success": True, "delete": id} where id is the id of the deleted record
         or appropriate status code indicating reason for failure
 '''
+@app.route('/drinks/<int:drink_id>', methods=["DELETE"])
+@requires_auth('delete:drinks')
+def delete_drink(jwt, drink_id):
+    drink = Drink.query.get(drink_id)
+
+    if not drink:
+        abort(400)
+
+    try:
+        drink.delete()
+    except:
+        db.session.rollback()
+        abort(500)
+    finally:
+        db.session.close()
+    
+    return jsonify({
+        'success': True,
+        'delete': drink_id
+    })
 
 
 # Error Handling
@@ -152,7 +197,7 @@ def unprocessable(error):
     }), 404
 
 '''
-@TODO implement error handler for AuthError
+@DONE implement error handler for AuthError
     error handler should conform to general task above
 '''
 @app.errorhandler(AuthError)
