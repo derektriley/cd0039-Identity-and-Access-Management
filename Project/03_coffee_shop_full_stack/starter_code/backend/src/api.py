@@ -13,7 +13,7 @@ app = Flask(__name__)
 setup_db(app)
 CORS(app)
 
-AUTH0_DOMAIN = 'https://dev-m63c4eg2y8coipcr.us.auth0.com'
+AUTH0_DOMAIN = 'dev-m63c4eg2y8coipcr.us.auth0.com'
 ALGORITHMS = ['RS256']
 API_AUDIENCE = 'https://localhost:5000'
 
@@ -34,7 +34,7 @@ def get_token_auth_header():
             'code': 'authorization_header_missing',
             'description': 'Authorization header is expected.'
         }, 401)
-
+ 
     parts = auth.split()
     if parts[0].lower() != 'bearer':
         raise AuthError({
@@ -68,7 +68,8 @@ def verify_decode_jwt(token):
             'code': 'invalid_header',
             'description': 'Authorization malformed.'
         }, 401)
-
+    print(unverified_header)
+    print (jwks['keys'])
     for key in jwks['keys']:
         if key['kid'] == unverified_header['kid']:
             rsa_key = {
@@ -118,7 +119,8 @@ def requires_auth(permission=''):
             token = get_token_auth_header()
             try:
                 payload = verify_decode_jwt(token)
-            except:
+            except Exception as e:
+                print(e)
                 abort(401)
             
             check_permissions(permission, payload)
@@ -162,14 +164,23 @@ def get_drinks(jwt):
     })
 
 '''
-@TODO implement endpoint
+@DONE implement endpoint
     GET /drinks-detail
         it should require the 'get:drinks-detail' permission
         it should contain the drink.long() data representation
     returns status code 200 and json {"success": True, "drinks": drinks} where drinks is the list of drinks
         or appropriate status code indicating reason for failure
 '''
+@app.route('/drinks-detail', methods=["GET"])
+@requires_auth('get:drinks-detail')
+def get_drinks_detail(jwt):
+    drinks = Drink.query.all()
+    drinksFormmatted = [drink.long() for drink in drinks]
 
+    return jsonify({
+        'success': True,
+        'drinks': drinksFormmatted
+    })
 
 '''
 @TODO implement endpoint
