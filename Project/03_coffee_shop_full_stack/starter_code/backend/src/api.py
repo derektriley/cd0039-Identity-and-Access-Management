@@ -8,14 +8,11 @@ from functools import wraps
 from urllib.request import urlopen
 from .database.models import db_drop_and_create_all, setup_db, Drink, db
 from .auth.auth import AuthError, requires_auth
+from .auth.settings import AUTH0_DOMAIN, ALGORITHMS, API_AUDIENCE
 
 app = Flask(__name__)
 setup_db(app)
 CORS(app)
-
-AUTH0_DOMAIN = 'dev-m63c4eg2y8coipcr.us.auth0.com'
-ALGORITHMS = ['RS256']
-API_AUDIENCE = 'https://localhost:5000'
 
 '''
 @DONE uncomment the following line to initialize the datbase
@@ -35,8 +32,7 @@ db_drop_and_create_all()
         or appropriate status code indicating reason for failure
 '''
 @app.route('/drinks', methods=["GET"])
-@requires_auth('get:drinks')
-def get_drinks(jwt):
+def get_drinks():
     drinks = Drink.query.all()
     drinksFormmatted = [drink.short() for drink in drinks]
 
